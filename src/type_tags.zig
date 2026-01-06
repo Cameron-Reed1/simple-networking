@@ -2,21 +2,21 @@ pub const @"null": u8 = 0;
 pub const boolean: u8 = 1;
 pub const int = struct {
     pub const unsigned = struct {
-        pub const @"8" = 2;
-        pub const @"16" = 3;
-        pub const @"32" = 4;
-        pub const @"64" = 5;
+        pub const @"8": u8 = 2;
+        pub const @"16": u8 = 3;
+        pub const @"32": u8 = 4;
+        pub const @"64": u8 = 5;
     };
     pub const signed = struct {
-        pub const @"8" = 6;
-        pub const @"16" = 7;
-        pub const @"32" = 8;
-        pub const @"64" = 9;
+        pub const @"8": u8 = 6;
+        pub const @"16": u8 = 7;
+        pub const @"32": u8 = 8;
+        pub const @"64": u8 = 9;
     };
 };
 pub const float = struct {
-    pub const @"32" = 10;
-    pub const @"64" = 11;
+    pub const @"32": u8 = 10;
+    pub const @"64": u8 = 11;
 };
 pub const array: u8 = 12;
 pub const struct_start: u8 = 13;
