@@ -49,17 +49,21 @@ pub fn Connection(PacketUnion: type) type {
             return try std.posix.poll(&pollfd, timeout) != 0;
         }
 
-        pub fn readPacket(self: *@This(), allocator: std.mem.Allocator) !PacketData {
+        pub fn readHeader(self: *@This()) !packets.PacketHeader {
             const reader = self.stream_reader.interface();
 
             const HeaderLenType = @FieldType(packets.PacketHeader, "len");
             const id_bytes = try reader.takeArray(@sizeOf(packet_id));
             const len_bytes = try reader.takeArray(@sizeOf(HeaderLenType));
-            const header = packets.PacketHeader{
+
+            return packets.PacketHeader{
                 .id = std.mem.readInt(packet_id, id_bytes, .big),
                 .len = std.mem.readInt(HeaderLenType, len_bytes, .big),
             };
+        }
 
+        pub fn readPacketData(self: *@This(), allocator: std.mem.Allocator, header: packets.PacketHeader) !PacketData {
+            const reader = self.stream_reader.interface();
 
             return switch (@as(Tag, @enumFromInt(header.id))) {
                 inline else => |t| blk: {
@@ -76,6 +80,11 @@ pub fn Connection(PacketUnion: type) type {
                     };
                 },
             };
+        }
+
+        pub fn readPacket(self: *@This(), allocator: std.mem.Allocator) !PacketData {
+            const header = try self.readHeader();
+            return try self.readPacketData(allocator, header);
         }
 
         pub fn sendPacket(self: *@This(), allocator: std.mem.Allocator, packet: Packet) !void {

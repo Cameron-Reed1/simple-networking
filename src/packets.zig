@@ -3,6 +3,7 @@ const std = @import("std");
 const type_tags = @import("type_tags.zig");
 
 
+pub const include_type_tags = config.include_type_tags;
 pub const packet_id = @Type(.{ .int = .{ .bits = config.packet_id_bits, .signedness = .unsigned } });
 
 

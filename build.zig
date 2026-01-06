@@ -48,6 +48,12 @@ pub fn build(b: *std.Build) void {
     });
     mod.addOptions("config", options);
 
+    const tools_mod = b.addModule("tools", .{
+        .root_source_file = b.path("src/tools/tools.zig"),
+        .target = target,
+    });
+    tools_mod.addImport("simple_networking", mod);
+
     // Here we define an executable. An executable needs to have a root module
     // which needs to expose a `main` function. While we could add a main function
     // to the module defined above, it's sometimes preferable to split business
@@ -86,6 +92,7 @@ pub fn build(b: *std.Build) void {
                 // can be extremely useful in case of collisions (which can happen
                 // importing modules from different packages).
                 .{ .name = "simple_networking", .module = mod },
+                .{ .name = "tools", .module = tools_mod },
             },
         }),
     });

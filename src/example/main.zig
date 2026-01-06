@@ -1,6 +1,7 @@
 const std = @import("std");
 const simple_networking = @import("simple_networking");
 const packets = @import("packets.zig");
+const tools = @import("tools");
 
 
 const Packet = simple_networking.packets.genPacketsUnion(.{
@@ -47,6 +48,28 @@ pub fn main() !void {
         try run_server(allocator);
     } else if (std.mem.eql(u8, arg, "--client")) {
         try run_client(allocator);
+    } else if (std.mem.eql(u8, arg, "--visualizer")) {
+        try run_visualize_server(allocator);
+    } else if (std.mem.eql(u8, arg, "--visualize")) {
+        if (simple_networking.packets.include_type_tags) {
+            const s1 = try simple_networking.packets.serialize(allocator, packets.LinePacket{ .line = "Hello, World!" });
+            defer allocator.free(s1);
+            try tools.printSerializedPacket(s1);
+
+            const s2 = try simple_networking.packets.serialize(allocator, packets.ValuePacket{ .value = -9375 });
+            defer allocator.free(s2);
+            try tools.printSerializedPacket(s2);
+
+            const s3 = try simple_networking.packets.serialize(allocator, struct{ i: u8, f: f32, b: bool, s: []const u8 }{ .i = 85, .f = -1.234, .b = false, .s = "tble" });
+            defer allocator.free(s3);
+            try tools.printSerializedPacket(s3);
+
+            const tags = simple_networking.type_tags;
+            try tools.printSerializedPacketWithHeader(.{ .id = 25, .len = 5 }, &.{ tags.struct_start, tags.int.signed.@"16", 65, 25, tags.struct_end });
+        } else {
+            std.debug.print("This requires -Dinclude_type_tags to be set\n", .{});
+            std.posix.exit(2);
+        }
     }
 }
 
@@ -71,6 +94,28 @@ fn handleConnection(conn: simple_networking.Connection(Packet), allocator: std.m
         defer pkt.arena.deinit();
         print(pkt.packet);
         if (pkt.packet == .close) break;
+    }
+}
+
+
+fn run_visualize_server(allocator: std.mem.Allocator) !void {
+    var server: simple_networking.Server(Packet) = .{ .addr = .initIp4(.{127, 0, 0, 1}, 15000), .onConnect = handleVisConnection, .shut_down = &shut_down };
+    try server.start(allocator);
+    std.debug.print("Exiting\n", .{});
+}
+
+fn handleVisConnection(conn: simple_networking.Connection(Packet), allocator: std.mem.Allocator) !void {
+    var connection = conn;
+    defer connection.deinit(allocator);
+
+    while (!shut_down.load(.acquire)) {
+        if (!try connection.poll(100)) continue;
+
+        const header = try connection.readHeader();
+        const pkt_buf = try connection.stream_reader.interface().take(header.len);
+
+        std.debug.print("Raw: {any}\n", .{ pkt_buf });
+        try tools.printSerializedPacketWithHeader(header, pkt_buf);
     }
 }
 
