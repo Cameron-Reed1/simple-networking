@@ -17,6 +17,20 @@ pub fn Connection(PacketUnion: type) type {
         stream_reader: std.net.Stream.Reader,
         stream_writer: std.net.Stream.Writer,
 
+        pub fn fromStream(allocator: std.mem.Allocator, stream: std.net.Stream) !Connection(Packet) {
+                const read_buf = try allocator.alloc(u8, 1024);
+                errdefer allocator.free(read_buf);
+
+                const write_buf = try allocator.alloc(u8, 1024);
+                errdefer allocator.free(write_buf);
+
+
+                return .{
+                    .stream_reader = stream.reader(read_buf),
+                    .stream_writer = stream.writer(write_buf),
+                };
+        }
+
         pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
             self.stream_reader.getStream().close();
             allocator.free(self.stream_reader.interface().buffer);

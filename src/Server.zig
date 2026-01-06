@@ -30,18 +30,7 @@ pub fn Server(PacketUnion: type) type {
                 const conn = try server.accept();
                 errdefer conn.stream.close();
 
-
-                const read_buf = try allocator.alloc(u8, 1024);
-                errdefer allocator.free(read_buf);
-
-                const write_buf = try allocator.alloc(u8, 1024);
-                errdefer allocator.free(write_buf);
-
-
-                const c = Connection(Packet){
-                    .stream_reader = conn.stream.reader(read_buf),
-                    .stream_writer = conn.stream.writer(write_buf),
-                };
+                const c: Connection(Packet) = try .fromStream(allocator, conn.stream);
                 self.onConnect(c, allocator) catch |err| {
                     std.debug.print("Error with connection: {t}\n", .{err});
                 };
