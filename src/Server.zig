@@ -28,9 +28,19 @@ pub fn Server(PacketUnion: type) type {
                 if (try std.posix.poll(&pollfd, 100) == 0) continue;
 
                 const conn = try server.accept();
-                errdefer conn.stream.close();
+                defer conn.stream.close();
 
-                const c: Connection(Packet) = try .fromStream(allocator, conn.stream);
+
+                const read_buf = try allocator.alloc(u8, 1024);
+                defer allocator.free(read_buf);
+                var reader = conn.stream.reader(read_buf);
+
+                const write_buf = try allocator.alloc(u8, 1024);
+                defer allocator.free(write_buf);
+                var writer = conn.stream.writer(write_buf);
+
+
+                const c: Connection(Packet) = .{ .stream = conn.stream, .reader = reader.interface(), .writer = &writer.interface };
                 self.onConnect(c, allocator) catch |err| {
                     std.debug.print("Error with connection: {t}\n", .{err});
                 };

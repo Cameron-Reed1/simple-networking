@@ -14,33 +14,16 @@ pub fn Connection(PacketUnion: type) type {
     };
 
     return struct {
-        stream_reader: std.net.Stream.Reader,
-        stream_writer: std.net.Stream.Writer,
-
-        pub fn fromStream(allocator: std.mem.Allocator, stream: std.net.Stream) !Connection(Packet) {
-                const read_buf = try allocator.alloc(u8, 1024);
-                errdefer allocator.free(read_buf);
-
-                const write_buf = try allocator.alloc(u8, 1024);
-                errdefer allocator.free(write_buf);
-
-
-                return .{
-                    .stream_reader = stream.reader(read_buf),
-                    .stream_writer = stream.writer(write_buf),
-                };
-        }
-
-        pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
-            self.stream_reader.getStream().close();
-            allocator.free(self.stream_reader.interface().buffer);
-            allocator.free(self.stream_writer.interface.buffer);
-        }
+        stream: ?std.net.Stream = null,
+        reader: *std.Io.Reader,
+        writer: *std.Io.Writer,
 
         pub fn poll(self: *const @This(), timeout: i32) !bool {
+            if (self.stream == null) return true;
+
             var pollfd = [1]std.posix.pollfd{
                 .{
-                    .fd = self.stream_reader.getStream().handle,
+                    .fd = self.stream.?.handle,
                     .events = std.posix.POLL.IN,
                     .revents = 0,
                 },
@@ -50,25 +33,17 @@ pub fn Connection(PacketUnion: type) type {
         }
 
         pub fn readHeader(self: *@This()) !packets.PacketHeader {
-            const reader = self.stream_reader.interface();
-
-            const HeaderLenType = @FieldType(packets.PacketHeader, "len");
-            const id_bytes = try reader.takeArray(@sizeOf(packet_id));
-            const len_bytes = try reader.takeArray(@sizeOf(HeaderLenType));
-
             return packets.PacketHeader{
-                .id = std.mem.readInt(packet_id, id_bytes, .big),
-                .len = std.mem.readInt(HeaderLenType, len_bytes, .big),
+                .id = try self.reader.takeInt(packet_id, .big),
+                .len = try self.reader.takeInt(@FieldType(packets.PacketHeader, "len"), .big),
             };
         }
 
         pub fn readPacketData(self: *@This(), allocator: std.mem.Allocator, header: packets.PacketHeader) !PacketData {
-            const reader = self.stream_reader.interface();
-
             return switch (@as(Tag, @enumFromInt(header.id))) {
                 inline else => |t| blk: {
                     const pkt_type = @FieldType(Packet, @tagName(t));
-                    const pkt_buf = try reader.take(header.len);
+                    const pkt_buf = try self.reader.take(header.len);
 
                     var arena: std.heap.ArenaAllocator = .init(allocator);
                     const arena_allocator = arena.allocator();
@@ -104,10 +79,9 @@ pub fn Connection(PacketUnion: type) type {
             std.mem.writeInt(HeaderLenType, header_bytes[@sizeOf(packet_id)..], header.len, .big);
 
 
-            var writer = &self.stream_writer.interface;
-            try writer.writeAll(&header_bytes);
-            try writer.writeAll(serialized);
-            try writer.flush();
+            try self.writer.writeAll(&header_bytes);
+            try self.writer.writeAll(serialized);
+            try self.writer.flush();
         }
     };
 }

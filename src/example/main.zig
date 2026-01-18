@@ -82,7 +82,6 @@ fn run_server(allocator: std.mem.Allocator) !void {
 
 fn handleConnection(conn: simple_networking.Connection(Packet), allocator: std.mem.Allocator) !void {
     var connection = conn;
-    defer connection.deinit(allocator);
 
     while (!shut_down.load(.acquire)) {
         if (!try connection.poll(100)) continue;
@@ -104,15 +103,14 @@ fn run_visualize_server(allocator: std.mem.Allocator) !void {
     std.debug.print("Exiting\n", .{});
 }
 
-fn handleVisConnection(conn: simple_networking.Connection(Packet), allocator: std.mem.Allocator) !void {
+fn handleVisConnection(conn: simple_networking.Connection(Packet), _: std.mem.Allocator) !void {
     var connection = conn;
-    defer connection.deinit(allocator);
 
     while (!shut_down.load(.acquire)) {
         if (!try connection.poll(100)) continue;
 
         const header = try connection.readHeader();
-        const pkt_buf = try connection.stream_reader.interface().take(header.len);
+        const pkt_buf = try connection.reader.take(header.len);
 
         std.debug.print("Raw: {any}\n", .{ pkt_buf });
         try tools.printSerializedPacketWithHeader(header, pkt_buf);
@@ -121,11 +119,20 @@ fn handleVisConnection(conn: simple_networking.Connection(Packet), allocator: st
 
 
 fn run_client(allocator: std.mem.Allocator) !void {
-    var connection = try simple_networking.connect(Packet, allocator, "127.0.0.1", 15000);
-    defer {
-        connection.sendPacket(allocator, .{ .close = .{} }) catch {};
-        connection.deinit(allocator);
-    }
+    const stream = try std.net.tcpConnectToHost(allocator, "127.0.0.1", 15000);
+    errdefer stream.close();
+
+    const read_buf = try allocator.alloc(u8, 1024);
+    defer allocator.free(read_buf);
+    var reader = stream.reader(read_buf);
+
+    const write_buf = try allocator.alloc(u8, 1024);
+    defer allocator.free(write_buf);
+    var writer = stream.writer(write_buf);
+
+
+    var connection = simple_networking.Connection(Packet){ .stream = stream, .reader = reader.interface(), .writer = &writer.interface };
+    defer connection.sendPacket(allocator, .{ .close = .{} }) catch {};
 
     var stdin_buf: [1024]u8 = undefined;
     const stdin_file = std.fs.File.stdin();
