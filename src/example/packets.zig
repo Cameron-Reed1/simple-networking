@@ -21,3 +21,20 @@ pub const ClosePacket = struct {
     pub const name = "close";
     pub const id: packet_id = std.math.maxInt(packet_id);
 };
+
+pub const EverythingPacket = struct {
+    pub const name = "everything";
+    pub const id: packet_id = std.math.maxInt(packet_id) - 1;
+
+    i: i8,
+    u: u9,
+    f: f32,
+    d: f64,
+    b: bool,
+    n: void,
+    a: [5]u8,
+    s: struct {
+        oi: ?i20,
+        st: []const u8,
+    },
+};

@@ -9,6 +9,7 @@ const Packet = simple_serialization.packets.PacketUnion(.{
     packets.ValuePacket,
     packets.LinePacket,
     packets.ClosePacket,
+    packets.EverythingPacket,
 });
 
 

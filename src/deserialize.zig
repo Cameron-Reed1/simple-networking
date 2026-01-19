@@ -125,7 +125,7 @@ fn deserialize_field(T: type, allocator: std.mem.Allocator, buffer: []const u8, 
             index += width;
         },
         .pointer => |ptr_info| index += try deserialize_slice(ptr_info.child, allocator, buffer[index..], value, include_tag),
-        .array => |arr_info| index += try deserialize_slice(arr_info.child, arr_info.len, allocator, buffer[index..], value, include_tag),
+        .array => |arr_info| index += try deserialize_array(arr_info.child, arr_info.len, allocator, buffer[index..], value, include_tag),
         .@"struct" => index += try deserialize_struct(T, allocator, buffer[index..], value, include_tag),
         .optional => |opt_info| {
             if ((include_tag and buffer[index] == type_tags.optional_value) or (!include_tag and buffer[index] == 1)) {
@@ -175,7 +175,7 @@ fn deserialize_array(T: type, len: comptime_int, allocator: std.mem.Allocator, b
         index += 1;
     }
 
-    if (std.mem.readInt(u16, buffer[index..index + 2], .big) != len) {
+    if (std.mem.readInt(u16, buffer[index..][0..2], .big) != len) {
         return DeserializeError.UnexpectedValue;
     }
     index += 2;
