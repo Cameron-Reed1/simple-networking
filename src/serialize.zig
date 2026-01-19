@@ -89,7 +89,7 @@ fn serialize_field(allocator: std.mem.Allocator, buffer: *std.ArrayListUnmanaged
             @memcpy(bytes, std.mem.asBytes(&value));
         },
         .pointer => |ptr_info| try serialize_slice(ptr_info.child, allocator, buffer, value, include_tag),
-        .array => |arr_info| try serialize_slice(arr_info.child, allocator, buffer, value, include_tag),
+        .array => |arr_info| try serialize_slice(arr_info.child, allocator, buffer, &value, include_tag),
         .@"struct" => try serialize_struct(allocator, buffer, value, include_tag),
         .optional => {
             if (value) |v| {
