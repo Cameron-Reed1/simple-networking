@@ -48,7 +48,6 @@ pub fn readPacketData(PacketUnion: type, allocator: std.mem.Allocator, reader: *
 
 pub fn readPacket(PacketUnion: type, allocator: std.mem.Allocator, reader: *std.Io.Reader) !PacketData(PacketUnion) {
     const header = try readHeader(reader);
-    std.debug.print("Header: {any}\n", .{ header });
     return try readPacketData(PacketUnion, allocator, reader, header);
 }
 
