@@ -1,7 +1,7 @@
-const net = @import("simple_networking");
+const ser = @import("simple_serialization");
 const std = @import("std");
 
-const packet_id = net.packet_id;
+const packet_id = ser.packet_id;
 
 
 const ParseError = error {
@@ -17,7 +17,7 @@ pub fn printSerializedPacket(data: []const u8) ParseError!void {
 }
 
 
-pub fn printSerializedPacketWithHeader(header: net.packets.PacketHeader, data: []const u8) ParseError!void {
+pub fn printSerializedPacketWithHeader(header: ser.packets.PacketHeader, data: []const u8) ParseError!void {
     std.debug.print("SerializedPacket(id: {}, len: {})\n", .{header.id, header.len});
     var i: usize = 0;
     while (i < data.len) {
@@ -28,22 +28,22 @@ pub fn printSerializedPacketWithHeader(header: net.packets.PacketHeader, data: [
 
 fn print_value(tag: u8, data: []const u8, indent: u8) ParseError!usize {
     return switch (tag) {
-        net.type_tags.@"null",
-        net.type_tags.optional_null => print_null(indent),
-        net.type_tags.boolean => print_boolean(data, indent),
-        net.type_tags.int.unsigned.@"8" => print_int(u8, data, indent),
-        net.type_tags.int.unsigned.@"16" => print_int(u16, data, indent),
-        net.type_tags.int.unsigned.@"32" => print_int(u32, data, indent),
-        net.type_tags.int.unsigned.@"64" => print_int(u64, data, indent),
-        net.type_tags.int.signed.@"8" => print_int(i8, data, indent),
-        net.type_tags.int.signed.@"16" => print_int(i16, data, indent),
-        net.type_tags.int.signed.@"32" => print_int(i32, data, indent),
-        net.type_tags.int.signed.@"64" => print_int(i64, data, indent),
-        net.type_tags.float.@"32" => print_float(f32, data, indent),
-        net.type_tags.float.@"64" => print_float(f64, data, indent),
-        net.type_tags.array => try print_array(data, indent),
-        net.type_tags.struct_start => try print_struct(data, indent),
-        net.type_tags.optional_value => try print_value(data[0], data[1..], indent),
+        ser.type_tags.@"null",
+        ser.type_tags.optional_null => print_null(indent),
+        ser.type_tags.boolean => print_boolean(data, indent),
+        ser.type_tags.int.unsigned.@"8" => print_int(u8, data, indent),
+        ser.type_tags.int.unsigned.@"16" => print_int(u16, data, indent),
+        ser.type_tags.int.unsigned.@"32" => print_int(u32, data, indent),
+        ser.type_tags.int.unsigned.@"64" => print_int(u64, data, indent),
+        ser.type_tags.int.signed.@"8" => print_int(i8, data, indent),
+        ser.type_tags.int.signed.@"16" => print_int(i16, data, indent),
+        ser.type_tags.int.signed.@"32" => print_int(i32, data, indent),
+        ser.type_tags.int.signed.@"64" => print_int(i64, data, indent),
+        ser.type_tags.float.@"32" => print_float(f32, data, indent),
+        ser.type_tags.float.@"64" => print_float(f64, data, indent),
+        ser.type_tags.array => try print_array(data, indent),
+        ser.type_tags.struct_start => try print_struct(data, indent),
+        ser.type_tags.optional_value => try print_value(data[0], data[1..], indent),
         else => {
             std.debug.print("t: {}\n", .{ tag });
             return ParseError.InvalidTypeTag;
@@ -114,7 +114,7 @@ fn print_struct(data: []const u8, indent: u8) ParseError!usize {
     std.debug.print("{{\n", .{});
 
     var i: usize = 0;
-    while (data[i] != net.type_tags.struct_end) {
+    while (data[i] != ser.type_tags.struct_end) {
         i += try print_value(data[i], data[i+1..], indent + 1) + 1;
     }
 
@@ -126,22 +126,22 @@ fn print_struct(data: []const u8, indent: u8) ParseError!usize {
 
 fn type_name(tag: u8) ParseError![]const u8 {
     return switch (tag) {
-        net.type_tags.@"null",
-        net.type_tags.optional_null => "null",
-        net.type_tags.boolean => "bool",
-        net.type_tags.int.unsigned.@"8" => "u8",
-        net.type_tags.int.unsigned.@"16" => "u16",
-        net.type_tags.int.unsigned.@"32" => "u32",
-        net.type_tags.int.unsigned.@"64" => "u64",
-        net.type_tags.int.signed.@"8" => "i8",
-        net.type_tags.int.signed.@"16" => "i16",
-        net.type_tags.int.signed.@"32" => "i32",
-        net.type_tags.int.signed.@"64" => "i64",
-        net.type_tags.float.@"32" => "f32",
-        net.type_tags.float.@"64" => "f64",
-        net.type_tags.array => "array",
-        net.type_tags.struct_start => "struct",
-        net.type_tags.optional_value => "optional",
+        ser.type_tags.@"null",
+        ser.type_tags.optional_null => "null",
+        ser.type_tags.boolean => "bool",
+        ser.type_tags.int.unsigned.@"8" => "u8",
+        ser.type_tags.int.unsigned.@"16" => "u16",
+        ser.type_tags.int.unsigned.@"32" => "u32",
+        ser.type_tags.int.unsigned.@"64" => "u64",
+        ser.type_tags.int.signed.@"8" => "i8",
+        ser.type_tags.int.signed.@"16" => "i16",
+        ser.type_tags.int.signed.@"32" => "i32",
+        ser.type_tags.int.signed.@"64" => "i64",
+        ser.type_tags.float.@"32" => "f32",
+        ser.type_tags.float.@"64" => "f64",
+        ser.type_tags.array => "array",
+        ser.type_tags.struct_start => "struct",
+        ser.type_tags.optional_value => "optional",
         else => return ParseError.InvalidTypeTag,
     };
 }

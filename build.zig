@@ -34,7 +34,7 @@ pub fn build(b: *std.Build) void {
     // to our consumers. We must give it a name because a Zig package can expose
     // multiple modules and consumers will need to be able to specify which
     // module they want to access.
-    const mod = b.addModule("simple_networking", .{
+    const mod = b.addModule("simple_serialization", .{
         // The root source file is the "entry point" of this module. Users of
         // this module will only be able to access public declarations contained
         // in this file, which means that if you have declarations that you
@@ -52,7 +52,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/tools/tools.zig"),
         .target = target,
     });
-    tools_mod.addImport("simple_networking", mod);
+    tools_mod.addImport("simple_serialization", mod);
 
     // Here we define an executable. An executable needs to have a root module
     // which needs to expose a `main` function. While we could add a main function
@@ -71,7 +71,7 @@ pub fn build(b: *std.Build) void {
     // If neither case applies to you, feel free to delete the declaration you
     // don't need and to put everything under a single module.
     const exe = b.addExecutable(.{
-        .name = "simple_networking",
+        .name = "simple_serialization",
         .root_module = b.createModule(.{
             // b.createModule defines a new module just like b.addModule but,
             // unlike b.addModule, it does not expose the module to consumers of
@@ -86,12 +86,12 @@ pub fn build(b: *std.Build) void {
             // List of modules available for import in source files part of the
             // root module.
             .imports = &.{
-                // Here "simple_networking" is the name you will use in your source code to
-                // import this module (e.g. `@import("simple_networking")`). The name is
+                // Here "simple_serialization" is the name you will use in your source code to
+                // import this module (e.g. `@import("simple_serialization")`). The name is
                 // repeated because you are allowed to rename your imports, which
                 // can be extremely useful in case of collisions (which can happen
                 // importing modules from different packages).
-                .{ .name = "simple_networking", .module = mod },
+                .{ .name = "simple_serialization", .module = mod },
                 .{ .name = "tools", .module = tools_mod },
             },
         }),

@@ -1,7 +1,6 @@
 const std = @import("std");
-const net = @import("simple_networking");
 
-const packet_id = net.packet_id;
+const packet_id = @import("simple_serialization").packet_id;
 
 
 pub const ValuePacket = struct {

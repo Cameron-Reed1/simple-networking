@@ -1,10 +1,11 @@
 const std = @import("std");
-const simple_networking = @import("simple_networking");
+const simple_serialization = @import("simple_serialization");
 const packets = @import("packets.zig");
 const tools = @import("tools");
+const Server = @import("Server.zig");
 
 
-const Packet = simple_networking.packets.genPacketsUnion(.{
+const Packet = simple_serialization.packets.PacketUnion(.{
     packets.ValuePacket,
     packets.LinePacket,
     packets.ClosePacket,
@@ -51,20 +52,20 @@ pub fn main() !void {
     } else if (std.mem.eql(u8, arg, "--visualizer")) {
         try run_visualize_server(allocator);
     } else if (std.mem.eql(u8, arg, "--visualize")) {
-        if (simple_networking.packets.include_type_tags) {
-            const s1 = try simple_networking.packets.serialize(allocator, packets.LinePacket{ .line = "Hello, World!" });
+        if (simple_serialization.packets.include_type_tags) {
+            const s1 = try simple_serialization.packets.serialize(allocator, packets.LinePacket{ .line = "Hello, World!" });
             defer allocator.free(s1);
             try tools.printSerializedPacket(s1);
 
-            const s2 = try simple_networking.packets.serialize(allocator, packets.ValuePacket{ .value = -9375 });
+            const s2 = try simple_serialization.packets.serialize(allocator, packets.ValuePacket{ .value = -9375 });
             defer allocator.free(s2);
             try tools.printSerializedPacket(s2);
 
-            const s3 = try simple_networking.packets.serialize(allocator, struct{ i: u8, f: f32, b: bool, s: []const u8 }{ .i = 85, .f = -1.234, .b = false, .s = "tble" });
+            const s3 = try simple_serialization.packets.serialize(allocator, struct{ i: u8, f: f32, b: bool, s: []const u8 }{ .i = 85, .f = -1.234, .b = false, .s = "tble" });
             defer allocator.free(s3);
             try tools.printSerializedPacket(s3);
 
-            const tags = simple_networking.type_tags;
+            const tags = simple_serialization.type_tags;
             try tools.printSerializedPacketWithHeader(.{ .id = 25, .len = 5 }, &.{ tags.struct_start, tags.int.signed.@"16", 65, 25, tags.struct_end });
         } else {
             std.debug.print("This requires -Dinclude_type_tags to be set\n", .{});
@@ -75,18 +76,19 @@ pub fn main() !void {
 
 
 fn run_server(allocator: std.mem.Allocator) !void {
-    var server: simple_networking.Server(Packet) = .{ .addr = .initIp4(.{127, 0, 0, 1}, 15000), .onConnect = handleConnection, .shut_down = &shut_down };
+    var server = Server{ .addr = .initIp4(.{127, 0, 0, 1}, 15000), .onConnect = handleConnection, .shut_down = &shut_down };
     try server.start(allocator);
     std.debug.print("Exiting\n", .{});
 }
 
-fn handleConnection(conn: simple_networking.Connection(Packet), allocator: std.mem.Allocator) !void {
-    var connection = conn;
+fn handleConnection(stream: std.net.Stream, allocator: std.mem.Allocator) !void {
+    var read_buf: [1024]u8 = undefined;
+    var reader = stream.reader(&read_buf);
 
     while (!shut_down.load(.acquire)) {
-        if (!try connection.poll(100)) continue;
+        // if (!try connection.poll(100)) continue;
 
-        const pkt = connection.readPacket(allocator) catch |err| {
+        const pkt = simple_serialization.deserialize.readPacket(Packet, allocator, reader.interface()) catch |err| {
             std.debug.print("Error reading packet: {any}\n", .{err});
             break;
         };
@@ -98,19 +100,20 @@ fn handleConnection(conn: simple_networking.Connection(Packet), allocator: std.m
 
 
 fn run_visualize_server(allocator: std.mem.Allocator) !void {
-    var server: simple_networking.Server(Packet) = .{ .addr = .initIp4(.{127, 0, 0, 1}, 15000), .onConnect = handleVisConnection, .shut_down = &shut_down };
+    var server = Server{ .addr = .initIp4(.{127, 0, 0, 1}, 15000), .onConnect = handleVisConnection, .shut_down = &shut_down };
     try server.start(allocator);
     std.debug.print("Exiting\n", .{});
 }
 
-fn handleVisConnection(conn: simple_networking.Connection(Packet), _: std.mem.Allocator) !void {
-    var connection = conn;
+fn handleVisConnection(stream: std.net.Stream, _: std.mem.Allocator) !void {
+    var read_buf: [1024]u8 = undefined;
+    var reader = stream.reader(&read_buf);
 
     while (!shut_down.load(.acquire)) {
-        if (!try connection.poll(100)) continue;
+        // if (!try connection.poll(100)) continue;
 
-        const header = try connection.readHeader();
-        const pkt_buf = try connection.reader.take(header.len);
+        const header = try simple_serialization.deserialize.readHeader(reader.interface());
+        const pkt_buf = try reader.interface().take(header.len);
 
         std.debug.print("Raw: {any}\n", .{ pkt_buf });
         try tools.printSerializedPacketWithHeader(header, pkt_buf);
@@ -122,17 +125,12 @@ fn run_client(allocator: std.mem.Allocator) !void {
     const stream = try std.net.tcpConnectToHost(allocator, "127.0.0.1", 15000);
     errdefer stream.close();
 
-    const read_buf = try allocator.alloc(u8, 1024);
-    defer allocator.free(read_buf);
-    var reader = stream.reader(read_buf);
-
-    const write_buf = try allocator.alloc(u8, 1024);
-    defer allocator.free(write_buf);
-    var writer = stream.writer(write_buf);
+    var write_buf: [1024]u8 = undefined;
+    var s_writer = stream.writer(&write_buf);
+    const writer = &s_writer.interface;
 
 
-    var connection = simple_networking.Connection(Packet){ .stream = stream, .reader = reader.interface(), .writer = &writer.interface };
-    defer connection.sendPacket(allocator, .{ .close = .{} }) catch {};
+    defer simple_serialization.serialize.write(Packet, allocator, .{ .close = .{} }, writer, true) catch {};
 
     var stdin_buf: [1024]u8 = undefined;
     const stdin_file = std.fs.File.stdin();
@@ -155,12 +153,12 @@ fn run_client(allocator: std.mem.Allocator) !void {
         if (std.mem.eql(u8, line, "exit")) break;
         if (std.mem.startsWith(u8, line, "value ")) {
             const v = std.fmt.parseInt(i32, line[6..], 10) catch {
-                try connection.sendPacket(allocator, .{ .line = .{ .line = line } });
+                try simple_serialization.serialize.write(Packet, allocator, .{ .line = .{ .line = line } }, writer, true);
                 continue;
             };
-            try connection.sendPacket(allocator, .{ .value = .{ .value = v } });
+            try simple_serialization.serialize.write(Packet, allocator, .{ .value = .{ .value = v } }, writer, true);
         } else {
-            try connection.sendPacket(allocator, .{ .line = .{ .line = line } });
+            try simple_serialization.serialize.write(Packet, allocator, .{ .line = .{ .line = line } }, writer, true);
         }
     }
     std.debug.print("Closing\n", .{});
