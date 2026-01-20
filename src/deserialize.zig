@@ -12,7 +12,7 @@ const DeserializeError = error {
 };
 
 
-fn PacketData(PacketUnion: type) type {
+pub fn PacketData(PacketUnion: type) type {
     return struct {
         packet: PacketUnion,
         arena: std.heap.ArenaAllocator,
