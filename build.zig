@@ -21,7 +21,7 @@ pub fn build(b: *std.Build) void {
     // target and optimize options) will be listed when running `zig build --help`
     // in this directory.
 
-    const packet_id_bits = b.option(u8, "packed_id_bits", "Integer type for packet ids") orelse 32;
+    const packet_id_bits = b.option(u8, "packet_id_bits", "Integer type for packet ids") orelse 32;
     const length_bits = b.option(u8, "length_bits", "Integer type for packet lengths") orelse 16;
     const include_type_tags = b.option(bool, "include_type_tags", "Include type tags in packets") orelse false;
     const options = b.addOptions();
