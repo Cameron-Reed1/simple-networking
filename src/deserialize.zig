@@ -137,6 +137,11 @@ fn deserialize_field(T: type, allocator: std.mem.Allocator, buffer: []const u8, 
                 return DeserializeError.UnexpectedValue;
             }
         },
+        .@"enum" => |enum_info| {
+            var int_value: enum_info.tag_type = undefined;
+            index += try deserialize_field(enum_info.tag_type, allocator, buffer[index..], &int_value, include_tag);
+            value.* = @enumFromInt(int_value);
+        },
         else => @compileError("Cannot deserialize unserializable type: " ++ @typeName(T)),
     }
 

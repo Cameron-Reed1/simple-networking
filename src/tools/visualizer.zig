@@ -1,6 +1,8 @@
 const ser = @import("simple_serialization");
 const std = @import("std");
 
+const type_tags = ser.type_tags;
+
 const packet_id = ser.packet_id;
 
 
@@ -28,22 +30,27 @@ pub fn printSerializedPacketWithHeader(header: ser.packets.PacketHeader, data: [
 
 fn print_value(tag: u8, data: []const u8, indent: u8) ParseError!usize {
     return switch (tag) {
-        ser.type_tags.@"null",
-        ser.type_tags.optional_null => print_null(indent),
-        ser.type_tags.boolean => print_boolean(data, indent),
-        ser.type_tags.int.unsigned.@"8" => print_int(u8, data, indent),
-        ser.type_tags.int.unsigned.@"16" => print_int(u16, data, indent),
-        ser.type_tags.int.unsigned.@"32" => print_int(u32, data, indent),
-        ser.type_tags.int.unsigned.@"64" => print_int(u64, data, indent),
-        ser.type_tags.int.signed.@"8" => print_int(i8, data, indent),
-        ser.type_tags.int.signed.@"16" => print_int(i16, data, indent),
-        ser.type_tags.int.signed.@"32" => print_int(i32, data, indent),
-        ser.type_tags.int.signed.@"64" => print_int(i64, data, indent),
-        ser.type_tags.float.@"32" => print_float(f32, data, indent),
-        ser.type_tags.float.@"64" => print_float(f64, data, indent),
-        ser.type_tags.array => try print_array(data, indent),
-        ser.type_tags.struct_start => try print_struct(data, indent),
-        ser.type_tags.optional_value => try print_value(data[0], data[1..], indent),
+        type_tags.@"null",
+        type_tags.optional_null => print_null(indent),
+        type_tags.boolean => print_boolean(data, indent),
+        type_tags.int.unsigned.@"8" => print_int(u8, data, indent),
+        type_tags.int.unsigned.@"16" => print_int(u16, data, indent),
+        type_tags.int.unsigned.@"32" => print_int(u32, data, indent),
+        type_tags.int.unsigned.@"64" => print_int(u64, data, indent),
+        type_tags.int.signed.@"8" => print_int(i8, data, indent),
+        type_tags.int.signed.@"16" => print_int(i16, data, indent),
+        type_tags.int.signed.@"32" => print_int(i32, data, indent),
+        type_tags.int.signed.@"64" => print_int(i64, data, indent),
+        type_tags.float.@"32" => print_float(f32, data, indent),
+        type_tags.float.@"64" => print_float(f64, data, indent),
+        type_tags.array => try print_array(data, indent),
+        type_tags.struct_start => try print_struct(data, indent),
+        type_tags.optional_value => try print_value(data[0], data[1..], indent),
+        type_tags.@"enum" => blk: {
+            print_indent(indent);
+            std.debug.print("[Enum] ", .{});
+            break :blk try print_value(data[0], data[1..], 0) + 1;
+        },
         else => {
             std.debug.print("t: {}\n", .{ tag });
             return ParseError.InvalidTypeTag;

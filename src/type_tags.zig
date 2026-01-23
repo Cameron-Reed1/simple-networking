@@ -23,6 +23,7 @@ pub const struct_start: u8 = 13;
 pub const struct_end: u8 = 14;
 pub const optional_null: u8 = 15;
 pub const optional_value: u8 = 16;
+pub const @"enum": u8 = 17;
 
 
 pub fn get(T: type) ?u8 {
@@ -46,6 +47,7 @@ pub fn get(T: type) ?u8 {
         .array => array,
         .@"struct" => struct_start,
         .optional => optional_null,
+        .@"enum" => @"enum",
         else => null,
     };
 }

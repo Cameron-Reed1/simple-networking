@@ -99,6 +99,7 @@ fn serialize_field(allocator: std.mem.Allocator, buffer: *std.ArrayListUnmanaged
                 try buffer.append(allocator, if (include_tag) type_tags.optional_null else 0);
             }
         },
+        .@"enum" => try serialize_field(allocator, buffer, @intFromEnum(value), include_tag),
         else => @compileError("Cannot serialize type: " ++ @typeName(ValueType)),
     }
 }

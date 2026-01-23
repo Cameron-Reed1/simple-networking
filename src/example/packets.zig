@@ -37,4 +37,20 @@ pub const EverythingPacket = struct {
         oi: ?i20,
         st: []const u8,
     },
+    e: enum {
+        value1,
+        value2,
+        value3,
+    },
+};
+
+pub const EnumTest = struct {
+    pub const name = "enum_test";
+    pub const id: packet_id = 3;
+
+    e: enum {
+        value1,
+        value2,
+        value3,
+    },
 };

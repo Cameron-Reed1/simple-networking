@@ -10,6 +10,7 @@ const Packet = simple_serialization.packets.PacketUnion(.{
     packets.LinePacket,
     packets.ClosePacket,
     packets.EverythingPacket,
+    packets.EnumTest,
 });
 
 
@@ -54,15 +55,15 @@ pub fn main() !void {
         try run_visualize_server(allocator);
     } else if (std.mem.eql(u8, arg, "--visualize")) {
         if (simple_serialization.packets.include_type_tags) {
-            const s1 = try simple_serialization.packets.serialize(allocator, packets.LinePacket{ .line = "Hello, World!" });
+            const s1 = try simple_serialization.serialize.serialize(allocator, packets.LinePacket{ .line = "Hello, World!" });
             defer allocator.free(s1);
             try tools.printSerializedPacket(s1);
 
-            const s2 = try simple_serialization.packets.serialize(allocator, packets.ValuePacket{ .value = -9375 });
+            const s2 = try simple_serialization.serialize.serialize(allocator, packets.ValuePacket{ .value = -9375 });
             defer allocator.free(s2);
             try tools.printSerializedPacket(s2);
 
-            const s3 = try simple_serialization.packets.serialize(allocator, struct{ i: u8, f: f32, b: bool, s: []const u8 }{ .i = 85, .f = -1.234, .b = false, .s = "tble" });
+            const s3 = try simple_serialization.serialize.serialize(allocator, struct{ i: u8, f: f32, b: bool, s: []const u8 }{ .i = 85, .f = -1.234, .b = false, .s = "tble" });
             defer allocator.free(s3);
             try tools.printSerializedPacket(s3);
 
@@ -158,6 +159,17 @@ fn run_client(allocator: std.mem.Allocator) !void {
                 continue;
             };
             try simple_serialization.serialize.write(Packet, allocator, .{ .value = .{ .value = v } }, writer, true);
+        } else if (std.mem.startsWith(u8, line, "enum ")) {
+            const v = std.fmt.parseInt(i32, line[5..], 10) catch {
+                try simple_serialization.serialize.write(Packet, allocator, .{ .line = .{ .line = line } }, writer, true);
+                continue;
+            };
+            switch (v) {
+                1 => try simple_serialization.serialize.write(Packet, allocator, .{ .enum_test = .{ .e = .value1 } }, writer, true),
+                2 => try simple_serialization.serialize.write(Packet, allocator, .{ .enum_test = .{ .e = .value2 } }, writer, true),
+                3 => try simple_serialization.serialize.write(Packet, allocator, .{ .enum_test = .{ .e = .value3 } }, writer, true),
+                else => try simple_serialization.serialize.write(Packet, allocator, .{ .line = .{ .line = line } }, writer, true),
+            }
         } else {
             try simple_serialization.serialize.write(Packet, allocator, .{ .line = .{ .line = line } }, writer, true);
         }
