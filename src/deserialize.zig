@@ -157,8 +157,8 @@ fn deserialize_slice(T: type, allocator: std.mem.Allocator, buffer: []const u8, 
         index += 1;
     }
 
-    const len = std.mem.readInt(u16, buffer[index..][0..2], .big);
-    index += 2;
+    const len = std.mem.readInt(packets.packet_len, buffer[index..][0..@sizeOf(packets.packet_len)], .big);
+    index += @sizeOf(packets.packet_len);
 
     const values: []T = try allocator.alloc(T, len);
     for (0..len) |i| {
@@ -179,10 +179,10 @@ fn deserialize_array(T: type, len: comptime_int, allocator: std.mem.Allocator, b
         index += 1;
     }
 
-    if (std.mem.readInt(u16, buffer[index..][0..2], .big) != len) {
+    if (std.mem.readInt(packets.packet_len, buffer[index..][0..@sizeOf(packets.packet_len)], .big) != len) {
         return DeserializeError.UnexpectedValue;
     }
-    index += 2;
+    index += @sizeOf(packets.packet_len);
 
     for (0..len) |i| {
         index += try deserialize_field(T, allocator, buffer[index..], &value[i], false);

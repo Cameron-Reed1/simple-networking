@@ -4,11 +4,12 @@ const config = @import("config");
 
 pub const include_type_tags = config.include_type_tags;
 pub const packet_id = @Type(.{ .int = .{ .bits = config.packet_id_bits, .signedness = .unsigned } });
+pub const packet_len = @Type(.{ .int = .{ .bits = config.length_bits, .signedness = .unsigned } });
 
 
 pub const PacketHeader = struct {
     id: packet_id,
-    len: u16,
+    len: packet_len,
 };
 
 

@@ -109,8 +109,8 @@ fn serialize_slice(T: type, allocator: std.mem.Allocator, buffer: *std.ArrayList
         try buffer.append(allocator, comptime type_tags.get(T) orelse @compileError("Cannot serialize type: " ++ @typeName(T)));
     }
 
-    const bytes = try buffer.addManyAsArray(allocator, 2);
-    std.mem.writeInt(u16, bytes, @intCast(value.len), .big);
+    const bytes = try buffer.addManyAsArray(allocator, @sizeOf(packets.packet_len));
+    std.mem.writeInt(packets.packet_len, bytes, @intCast(value.len), .big);
     for (value) |v| {
         try serialize_field(allocator, buffer, v, false);
     }
